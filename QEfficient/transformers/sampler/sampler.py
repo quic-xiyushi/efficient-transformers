@@ -225,14 +225,12 @@ def sampler_forward(
     # Guided decoding
     if (bitmask != -1).any():  # Skip if all bits are 1
         # (encoded as -1 int32 value in 2s complement binary representation)
-        # Decompress the bitmask
-        expanded_bitmask = torch.zeros(
-            (bitmask.shape[0], bitmask.shape[1] * 32), dtype=torch.bool
-        )  # Approximately (batch_size, vocab_size + 31)
+        # Create bit shifts
+        shifts = torch.arange(32, dtype=torch.int32)
+        shifts = shifts.view((1,) * bitmask.ndim + (32,))  # (1, ceil(vocab_size / 32), 32)
         # Extract the value of each of the 32 bits from compressed bitmask
-        for i in range(32):
-            bit_i = ((bitmask >> i) & 1).bool()
-            expanded_bitmask[:, i::32] = bit_i
+        flags = ((bitmask.unsqueeze(-1) >> shifts) & 1).bool()  # (batch_size, ceil(vocab_size / 32), 32)
+        expanded_bitmask = flags.reshape(bitmask.shape[0], -1)  # Approximately (batch_size, vocab_size + 31)
         expanded_bitmask = expanded_bitmask[:, :vocab_size]  # (batch_size, vocab_size)
         # Mask logits where bitmask is 0 with -inf
         logits = torch.where(expanded_bitmask == 1, logits, torch.finfo(torch.float16).min)
