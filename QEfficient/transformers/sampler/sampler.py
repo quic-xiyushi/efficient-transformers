@@ -126,6 +126,7 @@ def sampler_forward(
     random_numbers: Optional[torch.Tensor] = None,
     vision_embeds: Optional[torch.Tensor] = None,
     image_idx: Optional[torch.Tensor] = None,
+    bitmask: Optional[torch.Tensor] = None,
 ) -> Union[Tuple, SamplerOutput]:
     r"""
     Perform the sampling of next tokens on the QAIC device (instead of the host)
@@ -212,6 +213,19 @@ def sampler_forward(
         batch_index = torch.arange(batch_size).view(-1, 1)
 
     batch_index_reshaped = batch_index.view(-1)
+
+    # Guided decoding
+    if (bitmask != -1).any():  # Skip if all bits are 1 (encoded as -1 int32 value in 2s complement binary representation)
+        # Decompress the bitmask
+        expanded_bitmask = torch.zeros((bitmask.shape[0], bitmask.shape[1] * 32), dtype=torch.bool)  # Approximately (batch_size, vocab_size + 31)
+        # Extract the value of each of the 32 bits from compressed bitmask
+        for i in range(32):
+            bit_i = ((bitmask >> i) & 1).bool()
+            expanded_bitmask[:, i::32] = bit_i
+        expanded_bitmask = expanded_bitmask[:, :vocab_size]  # (batch_size, vocab_size)
+        # Mask logits where bitmask is 0 with -inf
+        logits = torch.where(expanded_bitmask == 1, logits, torch.finfo(torch.float16).min)
+
     # Prefill
     past_repetition_penalty_buffer_prefill, past_presence_penalty_buffer_prefill = prefill_path(
         input_ids=input_ids,
