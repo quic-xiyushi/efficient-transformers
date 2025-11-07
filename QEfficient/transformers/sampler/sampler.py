@@ -174,6 +174,14 @@ def sampler_forward(
         random_numbers (`torch.Tensor`, *optional*):
             Sampling parameter that represents the random seeds to use for random sampling.
             Must be in [-1, 1].
+
+        bitmask (`torch.Tensor`, *optional*):
+            A compressed binary mask used to guide token-level filtering during guided
+            decoding. Each element in the tensor is a signed 32-bit integer (torch.int32)
+            representing a group of 32 tokens, encoded using 2's complement binary
+            representation. The bits within each integer indicate whether the
+            corresponding token should be kept (1) or masked (0).
+            Shape: (batch_size, bitmask_size) where bitmask_size = ceil(vocab_size / 32)
     """
     if vision_embeds is not None:
         logits, vision_embeds, image_idx, past_key_values = self.old_forward(
