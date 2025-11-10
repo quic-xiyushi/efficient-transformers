@@ -51,6 +51,15 @@ from transformers.models.gpt_bigcode.modeling_gpt_bigcode import (
     GPTBigCodeForCausalLM,
     GPTBigCodeModel,
 )
+from transformers.models.gpt_oss.modeling_gpt_oss import (
+    GptOssAttention,
+    GptOssDecoderLayer,
+    GptOssExperts,
+    GptOssForCausalLM,
+    GptOssMLP,
+    GptOssModel,
+    GptOssRMSNorm,
+)
 from transformers.models.gptj.modeling_gptj import GPTJAttention, GPTJBlock, GPTJForCausalLM, GPTJModel
 from transformers.models.granite.modeling_granite import (
     GraniteAttention,
@@ -243,6 +252,14 @@ from QEfficient.transformers.models.gpt_bigcode.modeling_gpt_bigcode import (
     QEffGPTBigCodeForCausalLM,
     QEffGPTBigCodeModel,
 )
+from QEfficient.transformers.models.gpt_oss.modeling_gpt_oss import (
+    QEffGptOssAttention,
+    QEffGptOssDecoderLayer,
+    QEffGptOssExperts,
+    QEffGptOssForCausalLM,
+    QEffGptOssMLP,
+    QEffGptOssModel,
+)
 from QEfficient.transformers.models.gptj.modeling_gptj import (
     QEffGPTJAttention,
     QEffGPTJBlock,
@@ -419,6 +436,7 @@ class CustomOpsTransform(ModuleMappingTransform):
     _module_mapping = {
         GemmaRMSNorm: GemmaCustomRMSNormAIC,
         Gemma2RMSNorm: GemmaCustomRMSNormAIC,
+        GptOssRMSNorm: CustomRMSNormAIC,
         LlamaRMSNorm: CustomRMSNormAIC,
         Llama4TextRMSNorm: CustomRMSNormAIC,
         MistralRMSNorm: CustomRMSNormAIC,
@@ -504,6 +522,13 @@ class KVCacheTransform(ModuleMappingTransform):
         Gemma3TextModel: QEffGemma3TextModel,
         Gemma3ForCausalLM: QEffGemma3ForCausalLMModel,
         Gemma3ForConditionalGeneration: QEffGemma3ForConditionalGeneration,
+        # GPT_OSS
+        GptOssAttention: QEffGptOssAttention,
+        GptOssDecoderLayer: QEffGptOssDecoderLayer,
+        GptOssModel: QEffGptOssModel,
+        GptOssForCausalLM: QEffGptOssForCausalLM,
+        GptOssMLP: QEffGptOssMLP,
+        GptOssExperts: QEffGptOssExperts,
         # Granite
         GraniteModel: QEffGraniteModel,
         GraniteForCausalLM: QEffGraniteForCausalLM,
@@ -678,9 +703,17 @@ class SamplerTransform:
 
     # supported architectures
     _module_mapping = {
-        # Llama
-        QEffLlamaForCausalLM,
+        QEffFalconForCausalLM,
+        QEffGemmaForCausalLM,
+        QEffGPT2LMHeadModel,
+        QEffGPTJForCausalLM,
+        QEffGraniteForCausalLM,
+        QEffGraniteMoeForCausalLM,
         QEffInternDecoderWrapper,
+        QEffLlamaForCausalLM,
+        QEffMptForCausalLM,
+        QEffPhi3ForCausalLM,
+        QEffQwen2ForCausalLM,
         QEffQwen_2_5_vl_DecoderWrapper,
     }
 
