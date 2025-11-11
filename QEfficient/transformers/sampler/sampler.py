@@ -227,8 +227,8 @@ def sampler_forward(
         # Create bit shifts
         shifts = torch.arange(32, dtype=torch.int32).unsqueeze(0).unsqueeze(0)  # (1, 1, 32)
         # Extract the value of each of the 32 bits from compressed bitmask
-        flags = ((bitmask.unsqueeze(-1) >> shifts) & 1).bool()  # (batch_size, ceil(vocab_size / 32), 32)
-        expanded_bitmask = flags.reshape(bitmask.shape[0], -1)[:, :vocab_size]  # (batch_size, vocab_size)
+        flags = (bitmask.unsqueeze(-1) >> shifts) % 2  # (batch_size, ceil(vocab_size / 32), 32)
+        expanded_bitmask = flags.reshape(bitmask.shape[0], -1)[:, :vocab_size].bool()  # (batch_size, vocab_size)
         # Mask logits where bitmask is 0 with -inf
         logits = torch.where(expanded_bitmask == 1, logits, torch.finfo(torch.float16).min)
 
