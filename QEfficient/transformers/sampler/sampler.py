@@ -126,7 +126,7 @@ def sampler_forward(
     random_numbers: Optional[torch.Tensor] = None,
     vision_embeds: Optional[torch.Tensor] = None,
     image_idx: Optional[torch.Tensor] = None,
-    bitmask: Optional[torch.Tensor] = None,
+    token_bitmasks: Optional[torch.Tensor] = None,
 ) -> Union[Tuple, SamplerOutput]:
     r"""
     Perform the sampling of next tokens on the QAIC device (instead of the host)
@@ -175,13 +175,13 @@ def sampler_forward(
             Sampling parameter that represents the random seeds to use for random sampling.
             Must be in [-1, 1].
 
-        bitmask (`torch.Tensor`, *optional*):
-            A compressed binary mask used to guide token-level filtering during guided
+        token_bitmasks (`torch.Tensor`, *optional*):
+            Compressed binary mask used to guide token-level filtering during guided
             decoding. Each element in the tensor is a signed 32-bit integer (torch.int32)
             representing a group of 32 tokens, encoded using 2's complement binary
             representation. The bits within each integer indicate whether the
             corresponding token should be kept (1) or masked (0).
-            Shape: (batch_size, bitmask_size) where bitmask_size = ceil(vocab_size / 32)
+            Shape: (batch_size, token_bitmasks_size) where token_bitmasks_size = ceil(vocab_size / 32)
     """
     if vision_embeds is not None:
         logits, vision_embeds, image_idx, past_key_values = self.old_forward(
@@ -223,15 +223,17 @@ def sampler_forward(
     batch_index_reshaped = batch_index.view(-1)
 
     # Guided decoding
-    if (bitmask != -1).any():  # Skip if all bits are 1 (encoded as -1 int32 value in 2s complement)
+    if (token_bitmasks != -1).any():  # Skip if all bits are 1 (encoded as -1 int32 value in 2s complement)
         assert spec_length == 1, "Currently, Guided Decoding is not supported with Speculative Decoding"
         # Create bit shifts
         shifts = torch.arange(32, dtype=torch.int32).unsqueeze(0).unsqueeze(0)  # (1, 1, 32)
-        # Extract the value of each of the 32 bits from compressed bitmask
-        flags = (bitmask.unsqueeze(-1) >> shifts) % 2  # (batch_size, ceil(vocab_size / 32), 32)
-        expanded_bitmask = flags.reshape(bitmask.shape[0], -1)[:, :vocab_size].bool()  # (batch_size, vocab_size)
-        # Mask logits where bitmask is 0 with -inf
-        logits = torch.where(expanded_bitmask == 1, logits, torch.finfo(torch.float16).min)
+        # Extract the value of each of the 32 bits from compressed token_bitmasks
+        flags = (token_bitmasks.unsqueeze(-1) >> shifts) % 2  # (batch_size, ceil(vocab_size / 32), 32)
+        expanded_token_bitmasks = flags.reshape(token_bitmasks.shape[0], -1)[
+            :, :vocab_size
+        ].bool()  # (batch_size, vocab_size)
+        # Mask logits where token_bitmasks is 0 with -inf
+        logits = torch.where(expanded_token_bitmasks == 1, logits, torch.finfo(torch.float16).min)
 
     # Prefill
     past_repetition_penalty_buffer_prefill, past_presence_penalty_buffer_prefill = prefill_path(
