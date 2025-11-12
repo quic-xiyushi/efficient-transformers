@@ -864,6 +864,11 @@ class QEffCausalLMForTextImageToTextModel(QEFFBaseModel):
         example_inputs["random_numbers"] = torch.rand((bs, max_top_k_ids), dtype=torch.float)
         dynamic_axes["random_numbers"] = {0: "batch_size"}
 
+        example_inputs["token_bitmasks"] = torch.zeros(
+            (bs, self.model.language_model.config.vocab_size), dtype=torch.bool
+        )
+        dynamic_axes["token_bitmasks"] = {0: "batch_size"}
+
         return example_inputs, output_names, dynamic_axes
 
     def compile(
@@ -2598,6 +2603,9 @@ class QEFFAutoModelForCausalLM(QEFFBaseModel):
 
         example_inputs["random_numbers"] = torch.rand((bs, max_top_k_ids), dtype=torch.float)
         dynamic_axes["random_numbers"] = {0: "batch_size"}
+
+        example_inputs["token_bitmasks"] = torch.zeros((bs, self.model.config.vocab_size), dtype=torch.bool)
+        dynamic_axes["token_bitmasks"] = {0: "batch_size"}
 
         return example_inputs, output_names, dynamic_axes
 
