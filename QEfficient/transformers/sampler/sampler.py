@@ -224,6 +224,7 @@ def sampler_forward(
 
     # Guided decoding
     if (bitmask != -1).any():  # Skip if all bits are 1 (encoded as -1 int32 value in 2s complement)
+        assert spec_length == 1, "Currently, Guided Decoding is not supported with Speculative Decoding"
         # Create bit shifts
         shifts = torch.arange(32, dtype=torch.int32).unsqueeze(0).unsqueeze(0)  # (1, 1, 32)
         # Extract the value of each of the 32 bits from compressed bitmask
