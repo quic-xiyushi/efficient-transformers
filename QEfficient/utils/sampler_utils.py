@@ -14,7 +14,9 @@ from QEfficient.utils.constants import Constants
 from QEfficient.utils.logging_utils import logger
 
 
-def validate_sampler_inputs(session_inputs: Set[str], include_sampler: Optional[bool] = None) -> bool:
+def validate_sampler_inputs(
+    session_inputs: Set[str], include_sampler: Optional[bool] = None, include_guided_decoding: Optional[bool] = None
+) -> bool:
     """
     Validates whether the `QAICInferenceSession` inputs match inputs required for on-device sampling.
 
@@ -31,7 +33,7 @@ def validate_sampler_inputs(session_inputs: Set[str], include_sampler: Optional[
         ValueError if partial support is detected or if user intent conflicts with QPC capabilities.
     """
 
-    sampler_inputs = Constants.SAMPLER_INPUTS
+    sampler_inputs = Constants.SAMPLER_INPUTS | ({"token_bitmasks"} if include_guided_decoding else set())
     count = len(sampler_inputs & session_inputs)
 
     session_includes_sampler = True
@@ -143,5 +145,9 @@ def get_sampling_inputs_and_outputs(
 
     example_inputs["random_numbers"] = torch.rand((bs, max_top_k_ids), dtype=torch.float)
     dynamic_axes["random_numbers"] = {0: "batch_size"}
+
+    if qaic_config.get("include_guided_decoding", False):
+        example_inputs["token_bitmasks"] = torch.zeros((bs, vocab_size), dtype=torch.bool)
+        dynamic_axes["token_bitmasks"] = {0: "batch_size"}
 
     return example_inputs, output_names, dynamic_axes
